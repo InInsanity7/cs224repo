@@ -6,16 +6,17 @@
 const int MAX_MEM_SIZE  = (1 << 13);
 
 void fetchStage(int *icode, int *ifun, int *rA, int *rB, wordType *valC, wordType *valP) {
+
     byteType b = getByteFromMemory(getPC());
     *icode = b >> 4;
     *ifun = b & 0xf;
 
     if (*icode == HALT) {
-        *valP = getPC() + 2;
+        *valP = getPC() + 1;
         setStatus(STAT_HLT);
     }
     else if (*icode == NOP) {
-        *valP = getPC() + 2;
+        *valP = getPC() + 1;
     }
     else if (*icode == RRMOVQ) {
         b = getByteFromMemory(getPC() + 1);
@@ -58,12 +59,12 @@ void fetchStage(int *icode, int *ifun, int *rA, int *rB, wordType *valC, wordTyp
     }
     else if (*icode == JXX) {
         b = getByteFromMemory(getPC() + 1);
-        *valC = getWordFromMemory(getPC() + 2);
+        *valC = getWordFromMemory(getPC() + 1);
         *valP = getPC() + 9;
     }
     else if (*icode == CALL) {
         b = getByteFromMemory(getPC() + 1);
-        *valC = getWordFromMemory(getPC() + 2);
+        *valC = getWordFromMemory(getPC() + 1);
         *valP = getPC() + 9;
     }
     else if (*icode == RET) {
@@ -128,7 +129,6 @@ void decodeStage(int icode, int rA, int rB, wordType *valA, wordType *valB) {
 }
 
 void executeStage(int icode, int ifun, wordType valA, wordType valB, wordType valC, wordType *valE, bool *Cnd) {
- 
     /* else if (icode == HALT) { */
     /* } */
     /* else if (icode == NOP) { */
@@ -137,10 +137,10 @@ void executeStage(int icode, int ifun, wordType valA, wordType valB, wordType va
         *valE = 0 + valA;
     }
     else if (icode == CMOVXX) {
-        *valE = 0 + valA
+        *valE = 0 + valA;
     }
     else if (icode == IRMOVQ) {
-        *valE = 0 + valA;
+        *valE = 0 + valC;
     }
     else if (icode == RMMOVQ) {
         *valE = valB + valC;
@@ -149,22 +149,22 @@ void executeStage(int icode, int ifun, wordType valA, wordType valB, wordType va
         *valE = valB + valC;
     }
     else if (icode == OPQ) {
-        else if (ifun == ADD) {
+        if (ifun == ADD) {
             *valE = valB + valA;
             setFlags((*valE < 0), (*valE == 0), 
-                    ((valB < 0 == valA < 0) && (*valE < 0 != valB < 0)));
+                    (((valB < 0) == (valA < 0)) && ((*valE < 0) != (valB < 0))));
         }
         else if (ifun == SUB) {
             *valE = valB - valA;
             setFlags((*valE < 0), (*valE == 0),
-                    (!(valB < 0 == valA < 0) && (*valE < 0 != valB < 0))); 
+                    (!((valB < 0) == (valA < 0)) && ((*valE < 0) != (valB < 0)))); 
         }
         else if (ifun == AND) {
-            setFlags((*valE < 0), (*valE == 0), false);
+            setFlags((*valB < 0), (*valB == 0), FALSE);
         }
         else if (ifun == XOR) {
             *valE = valB ^ valA;
-            setFlags((*valE < 0), (*valE == 0), false);
+            setFlags((*valB < 0), (*valB == 0), FALSE);
         }
     }
     else if (icode == JXX) {
@@ -228,7 +228,7 @@ void writebackStage(int icode, wordType rA, wordType rB, wordType valE, wordType
     /* } */
     /* else if (icode == NOP) { */
     /* } */
-    else if (icode == RRMOVQ) {
+    if (icode == RRMOVQ) {
         setRegister(rB, valE);
     }
     else if (icode == CMOVXX) {
@@ -265,7 +265,7 @@ void writebackStage(int icode, wordType rA, wordType rB, wordType valE, wordType
 void pcUpdateStage(int icode, wordType valC, wordType valP, bool Cnd, wordType valM) {
 
     if (icode == JXX) {
-        Cond(ifun) ? setPC(valC) : setPC(valP);
+        (Cnd == TRUE) ? setPC(valC) : setPC(valP);
     }
     else if (icode == CALL) {
         setPC(valC);
